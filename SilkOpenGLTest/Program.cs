@@ -23,6 +23,9 @@ public class Program
 
     private static uint texture1;
     private static uint texture2;
+
+    private static float moveX = 0;
+    private static bool isOnUpdateTransform = false;
     private static readonly float[] Vertices =
         {
             //X    Y      Z   colors      texture coords
@@ -107,23 +110,36 @@ public class Program
         gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
         gl.EnableVertexAttribArray(2);
 
-        texture1 = LoadTexture("img/test.jpg", texture1);
-        texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat, GLEnum.Nearest, GLEnum.Nearest);
+        texture1 = LoadTexture("img/mark.png", texture1);
+        texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
 
         shader.Use();
         shader.SetInt("texture2", 1);
         shader.SetFloat("tex2Scale", 1.0f);
         shader.SetFloat("mixFactor", 0f);
-
         // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
         //gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 
         //gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Line);
     }
 
-    private static void OnUpdate(double deltaTime)
+    private static unsafe void OnUpdate(double deltaTime)
     {
-        //double timeValue = _window.Time;
+        if(isOnUpdateTransform)
+        {
+            double timeValue = _window.Time;
+            Matrix4X4<float> trans = Matrix4X4<float>.Identity;
+            //trans = Matrix4X4.CreateRotationZ((float)timeValue) * trans;
+            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, (float)Math.Sin(timeValue), 0f)) * trans;
+
+            shader.SetMat4("transform", trans);
+        }
+        else
+        {
+            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, 0f, 0f));
+            shader.SetMat4("transform", trans);
+        }
+
         //double greenValue = (Math.Sin(timeValue) / 2.0f + 0.5f);
         //int vertexColorLocation = gl.GetUniformLocation(ShaderProgram, "timeColor");
         //gl.UseProgram(ShaderProgram);
@@ -206,6 +222,17 @@ public class Program
             shader.Use();
             shader.SetFloat("mixFactor", shader.GetUniformFloatValue("mixFactor") + 0.1f);
         }
+
+        if (key == Key.A || key == Key.D)
+        {
+            moveX += key == Key.A ? -0.1f : 0.1f;
+        }
+
+        if (key == Key.R)
+        {
+            isOnUpdateTransform = !isOnUpdateTransform;
+        }
+
     }
 
     private static unsafe uint LoadTexture(

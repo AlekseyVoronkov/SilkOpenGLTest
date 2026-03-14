@@ -1,6 +1,7 @@
 ﻿using System;
 using System.IO;
 using Silk.NET.OpenGL;
+using Silk.NET.Maths;
 
 namespace SilkOpenGLTest
 {
@@ -63,6 +64,13 @@ namespace SilkOpenGLTest
             int location = gl.GetUniformLocation(handle, name);
             if (location != -1)
                 gl.Uniform1(location, value);
+        }
+
+        public unsafe void SetMat4(string name, Matrix4X4<float> mat4)
+        {
+            int location = gl.GetUniformLocation(handle, name);
+            if (location != -1)
+                gl.UniformMatrix4(location, 1, false, (float*)&mat4);
         }
 
         public float GetUniformFloatValue(string name)
