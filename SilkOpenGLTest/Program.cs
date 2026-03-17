@@ -14,6 +14,10 @@ namespace SilkOpenGLTest;
 public class Program
 {
     private static IWindow _window;
+    private static int _width = 800;
+    private static int _height = 600;
+    private static float _aspectRatio = (float)_width/(float)_height;
+
     private static GL gl;
     private static uint VBO;
     private static uint VAO;
@@ -29,11 +33,66 @@ public class Program
     private static readonly float[] Vertices =
         {
             //X    Y      Z   colors      texture coords
-            0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            -0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            -0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f
+            //0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
+            //0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
+            //-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
+            //-0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+             0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
+             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
+            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
         };
+
+    private static readonly Vector3D<float>[] CubePositions =
+    {
+        new Vector3D<float>( 0.0f,  0.0f,  0.0f),
+        new Vector3D<float>( 2.0f,  5.0f, -15.0f),
+        new Vector3D<float>(-1.5f, -2.2f, -2.5f),
+        new Vector3D<float>(-3.8f, -2.0f, -12.3f),
+        new Vector3D<float>( 2.4f, -0.4f, -3.5f),
+        new Vector3D<float>(-1.7f,  3.0f, -7.5f),
+        new Vector3D<float>( 1.3f, -2.0f, -2.5f),
+        new Vector3D<float>( 1.5f,  2.0f, -2.5f),
+        new Vector3D<float>( 1.5f,  0.2f, -1.5f),
+        new Vector3D<float>(-1.3f,  1.0f, -1.5f)
+    };
 
     private static readonly uint[] Indices =
         {
@@ -49,11 +108,11 @@ public class Program
         1f, 0.0f
     };
 
-    private static readonly int VertexSize = 8;
+    private static readonly int VertexSize = 5;
     public static void Main(string[] args)
     {
         var options = WindowOptions.Default;
-        options.Size = new Vector2D<int>(800, 600);
+        options.Size = new Vector2D<int>(_width, _height);
         options.Title = "Sanity(3/100)";
         _window = Window.Create(options);
 
@@ -104,19 +163,21 @@ public class Program
         gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)0);
         gl.EnableVertexAttribArray(0);
 
-        gl.VertexAttribPointer(1, 3, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(3 * sizeof(float)));
+        gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(3 * sizeof(float)));
         gl.EnableVertexAttribArray(1);
 
-        gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
-        gl.EnableVertexAttribArray(2);
+        //gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
+        //gl.EnableVertexAttribArray(2);
 
-        texture1 = LoadTexture("img/mark.png", texture1);
-        texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
+        texture1 = LoadTexture("img/test.jpg", texture1);
+        texture2 = LoadTexture("img/mark.png", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
 
         shader.Use();
         shader.SetInt("texture2", 1);
         shader.SetFloat("tex2Scale", 1.0f);
         shader.SetFloat("mixFactor", 0f);
+
+        gl.Enable(GLEnum.DepthTest);
         // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
         //gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
 
@@ -125,12 +186,12 @@ public class Program
 
     private static unsafe void OnUpdate(double deltaTime)
     {
-        if(isOnUpdateTransform)
+        float timeValue = (float)_window.Time;
+        if (isOnUpdateTransform)
         {
-            double timeValue = _window.Time;
             Matrix4X4<float> trans = Matrix4X4<float>.Identity;
             //trans = Matrix4X4.CreateRotationZ((float)timeValue) * trans;
-            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, (float)Math.Sin(timeValue), 0f)) * trans;
+            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, (float)Math.Tan(timeValue), 0f)) * trans;
 
             shader.SetMat4("transform", trans);
         }
@@ -139,16 +200,12 @@ public class Program
             Matrix4X4<float> trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, 0f, 0f));
             shader.SetMat4("transform", trans);
         }
-
-        //double greenValue = (Math.Sin(timeValue) / 2.0f + 0.5f);
-        //int vertexColorLocation = gl.GetUniformLocation(ShaderProgram, "timeColor");
-        //gl.UseProgram(ShaderProgram);
-        //gl.Uniform4(vertexColorLocation, 0.0f, (float)greenValue, 0.0f, 1.0f);
     }
 
     private static unsafe void OnRender(double deltaTime)
     {
         gl.Clear(ClearBufferMask.ColorBufferBit);
+        gl.Clear(ClearBufferMask.DepthBufferBit);
 
         gl.ActiveTexture(GLEnum.Texture0);
         gl.BindTexture(GLEnum.Texture2D, texture1);
@@ -160,7 +217,37 @@ public class Program
 
         gl.BindVertexArray(VAO);
         //gl.DrawArrays(GLEnum.Triangles, 0, 3);
-        gl.DrawElements(PrimitiveType.Triangles, 6, DrawElementsType.UnsignedInt, (void*)0);
+
+        float timeValue = (float)_window.Time;
+
+        Matrix4X4<float> view = Matrix4X4<float>.Identity;
+        view = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, -3.0f)) * view;
+        shader.SetMat4("view", view);
+
+        Matrix4X4<float> projection = Matrix4X4<float>.Identity;
+        float fov = MathF.PI / 180f * 45.0f;
+        projection = Matrix4X4.CreatePerspectiveFieldOfView(fov, _aspectRatio, 0.1f, 100.0f) * projection;
+        shader.SetMat4("projection", projection);
+
+        for (uint i = 0; i < 10; i++)
+        {
+            Matrix4X4<float> model = Matrix4X4<float>.Identity;
+            model = Matrix4X4.CreateTranslation(CubePositions[i]) * model;
+
+            float angle = timeValue * i; // в градусах
+            float angleRad = angle * MathF.PI / 180f;
+            Vector3D<float> axis = new Vector3D<float>(1.0f, 0.3f, 0.5f);
+            axis = Vector3D.Normalize(axis);
+
+            Quaternion<float> rotation = Quaternion<float>.CreateFromAxisAngle(axis, angleRad);
+            Matrix4X4<float> rotationMatrix = Matrix4X4.CreateFromQuaternion(rotation);
+            model = rotationMatrix * model;
+
+            shader.SetMat4("model", model);
+
+            // Рисуем куб
+            gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
+        }
         //gl.DeleteVertexArray(VAO);
         //gl.DeleteBuffer(VBO);
         //gl.DeleteProgram(ShaderProgram);
@@ -273,5 +360,4 @@ public class Program
 
         return texture;
     }
-
 }
