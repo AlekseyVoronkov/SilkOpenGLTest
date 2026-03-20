@@ -8,15 +8,20 @@ using System.Runtime.CompilerServices;
 using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
+using System.Numerics;
 
 namespace SilkOpenGLTest;
 
 public class Program
 {
     private static IWindow _window;
+    private static IInputContext input;
     private static int _width = 800;
     private static int _height = 600;
     private static float _aspectRatio = (float)_width/(float)_height;
+    static float fov = MathF.PI / 180f * 45.0f;
+
+    private static Camera camera = new Camera();
 
     private static GL gl;
     private static uint VBO;
@@ -24,11 +29,8 @@ public class Program
     private static uint EBO;
     private static Shader shader;
     private static bool isLine = false;
-
     private static uint texture1;
     private static uint texture2;
-
-    private static float moveX = 0;
     private static bool isOnUpdateTransform = false;
     private static readonly float[] Vertices =
         {
@@ -121,7 +123,6 @@ public class Program
         _window.Update += OnUpdate;
         _window.FramebufferResize += OnFramebufferResize;
         _window.Closing += OnClose;
-
         _window.Run();
 
         _window.Dispose();
@@ -130,11 +131,22 @@ public class Program
 
     private static unsafe void OnLoad()
     {
-        IInputContext input = _window.CreateInput();
+        input = _window.CreateInput();
 
         // Subscribing each connected keyboard to KeyDown event
         for (int i = 0; i < input.Keyboards.Count; i++)
+        {
             input.Keyboards[i].KeyDown += KeyDown;
+        }
+
+
+        for (int i = 0; i < input.Mice.Count; i++)
+        {
+            input.Mice[i].Cursor.CursorMode = CursorMode.Raw;
+            input.Mice[i].Cursor.IsConfined = true;
+            input.Mice[i].Scroll += OnMouseWheelScrole;
+            input.Mice[i].MouseMove += OnMouseMove;
+        }
 
         gl = GL.GetApi(_window);
         shader = new Shader(gl, "shaders/vertex.glsl", "shaders/fragment.glsl");
@@ -169,8 +181,8 @@ public class Program
         //gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
         //gl.EnableVertexAttribArray(2);
 
-        texture1 = LoadTexture("img/test.jpg", texture1);
-        texture2 = LoadTexture("img/mark.png", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
+        texture1 = LoadTexture("img/govno.png", texture1);
+        texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
 
         shader.Use();
         shader.SetInt("texture2", 1);
@@ -186,24 +198,41 @@ public class Program
 
     private static unsafe void OnUpdate(double deltaTime)
     {
+
+        if (input.Keyboards[0].IsKeyPressed(Key.W))
+            camera.MoveForward();
+
+        if (input.Keyboards[0].IsKeyPressed(Key.S))
+            camera.MoveBackwards();
+
+        if (input.Keyboards[0].IsKeyPressed(Key.A))
+            camera.MoveLeft();
+
+        if (input.Keyboards[0].IsKeyPressed(Key.D))
+            camera.MoveRight();
+
         float timeValue = (float)_window.Time;
         if (isOnUpdateTransform)
         {
             Matrix4X4<float> trans = Matrix4X4<float>.Identity;
             //trans = Matrix4X4.CreateRotationZ((float)timeValue) * trans;
-            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, (float)Math.Tan(timeValue), 0f)) * trans;
+            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, (float)Math.Sin(timeValue * 100) )) * trans;
 
             shader.SetMat4("transform", trans);
         }
         else
         {
-            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(new Vector3D<float>(moveX, 0f, 0f));
+            Matrix4X4<float> trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0f, 0f, 0f));
             shader.SetMat4("transform", trans);
         }
     }
 
     private static unsafe void OnRender(double deltaTime)
     {
+        float timeValue = (float)_window.Time;
+
+        camera.cameraSpeed = 2.5f * (float)deltaTime;
+
         gl.Clear(ClearBufferMask.ColorBufferBit);
         gl.Clear(ClearBufferMask.DepthBufferBit);
 
@@ -218,14 +247,9 @@ public class Program
         gl.BindVertexArray(VAO);
         //gl.DrawArrays(GLEnum.Triangles, 0, 3);
 
-        float timeValue = (float)_window.Time;
-
-        Matrix4X4<float> view = Matrix4X4<float>.Identity;
-        view = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, -3.0f)) * view;
-        shader.SetMat4("view", view);
+        shader.SetMat4("view", camera.GetView());
 
         Matrix4X4<float> projection = Matrix4X4<float>.Identity;
-        float fov = MathF.PI / 180f * 45.0f;
         projection = Matrix4X4.CreatePerspectiveFieldOfView(fov, _aspectRatio, 0.1f, 100.0f) * projection;
         shader.SetMat4("projection", projection);
 
@@ -310,9 +334,24 @@ public class Program
             shader.SetFloat("mixFactor", shader.GetUniformFloatValue("mixFactor") + 0.1f);
         }
 
-        if (key == Key.A || key == Key.D)
+        if (key == Key.A)
         {
-            moveX += key == Key.A ? -0.1f : 0.1f;
+            camera.MoveLeft();
+        }
+
+        if (key == Key.D)
+        {
+            camera.MoveRight();
+        }
+
+        if (key == Key.W)
+        {
+            camera.MoveForward();
+        }
+
+        if (key == Key.S)
+        {
+            camera.MoveBackwards();
         }
 
         if (key == Key.R)
@@ -322,6 +361,15 @@ public class Program
 
     }
 
+    private static void OnMouseMove(IMouse mouse, Vector2 position)
+    {
+        Console.WriteLine($"Mouse moved: {position.X}, {position.Y}");
+        camera.ProcessMouseMovement(position.X, position.Y);
+    }
+    private static void OnMouseWheelScrole(IMouse mouse, ScrollWheel scrollWheel)
+    {
+        camera.ProcessMouseScroll(scrollWheel.Y, ref fov);
+    }
     private static unsafe uint LoadTexture(
         string path, 
         uint texture,

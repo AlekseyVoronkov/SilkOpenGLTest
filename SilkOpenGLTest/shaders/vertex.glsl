@@ -13,7 +13,7 @@ uniform mat4 transform;
 
 void main()
 {
-    gl_Position = transform * projection * view * model * vec4(aPos, 1.0);
+    gl_Position = projection * view * transform * model * vec4(aPos, 1.0);
     //ourColor = aColor; // set ourColor to the input color we got from the vertex data 
     TextureCoords = aTextureCoords;
 }
