@@ -9,6 +9,7 @@ using SixLabors.ImageSharp;
 using SixLabors.ImageSharp.PixelFormats;
 using SixLabors.ImageSharp.Processing;
 using System.Numerics;
+using System.Collections.Generic;
 
 namespace SilkOpenGLTest;
 
@@ -21,13 +22,13 @@ public class Program
     private static float _aspectRatio = (float)_width/(float)_height;
     static float fov = MathF.PI / 180f * 45.0f;
 
-    private static Camera camera = new Camera();
-
     private static GL gl;
     private static uint VBO;
     private static uint VAO;
+    private static uint lightVAO;
     private static uint EBO;
-    private static Shader shader;
+    private static Shader cubeShader;
+    private static Shader lightsourceShader;
     private static bool isLine = false;
     private static uint texture1;
     private static uint texture2;
@@ -82,7 +83,7 @@ public class Program
             -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
         };
 
-    private static readonly Vector3D<float>[] CubePositions =
+    public static Vector3D<float>[] CubePositions =
     {
         new Vector3D<float>( 0.0f,  0.0f,  0.0f),
         new Vector3D<float>( 2.0f,  5.0f, -15.0f),
@@ -93,8 +94,15 @@ public class Program
         new Vector3D<float>( 1.3f, -2.0f, -2.5f),
         new Vector3D<float>( 1.5f,  2.0f, -2.5f),
         new Vector3D<float>( 1.5f,  0.2f, -1.5f),
-        new Vector3D<float>(-1.3f,  1.0f, -1.5f)
+        new Vector3D<float>(-1.3f,  1.0f, -1.5f),
+        new Vector3D<float>(-5.0f,  5.0f, -5.0f),
+        new Vector3D<float>(-6.0f,  5.0f, -5.0f),
+        new Vector3D<float>(-7.0f,  5.0f, -5.0f),
+        new Vector3D<float>(-8.0f,  5.0f, -5.0f)
+
     };
+
+    private static Camera camera = new Camera();
 
     private static readonly uint[] Indices =
         {
@@ -149,7 +157,8 @@ public class Program
         }
 
         gl = GL.GetApi(_window);
-        shader = new Shader(gl, "shaders/vertex.glsl", "shaders/fragment.glsl");
+        lightsourceShader = new Shader(gl, "shaders/lightsource/vertex.glsl", "shaders/lightsource/fragment.glsl");
+        cubeShader = new Shader(gl, "shaders/cube/vertex.glsl", "shaders/cube/fragment.glsl");
         gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
         VAO = gl.GenVertexArray();
@@ -181,24 +190,22 @@ public class Program
         //gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
         //gl.EnableVertexAttribArray(2);
 
-        texture1 = LoadTexture("img/govno.png", texture1);
+        texture1 = LoadTexture("img/igor2.png", texture1);
         texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
 
-        shader.Use();
-        shader.SetInt("texture2", 1);
-        shader.SetFloat("tex2Scale", 1.0f);
-        shader.SetFloat("mixFactor", 0f);
+        cubeShader.Use();
+        cubeShader.SetInt("texture2", 1);
+        cubeShader.SetFloat("tex2Scale", 1.0f);
+        cubeShader.SetFloat("mixFactor", 0f);
 
         gl.Enable(GLEnum.DepthTest);
-        // note that this is allowed, the call to glVertexAttribPointer registered VBO as the vertex attribute's bound vertex buffer object so afterwards we can safely unbind
-        //gl.BindBuffer(BufferTargetARB.ArrayBuffer, 0);
-
-        //gl.PolygonMode(GLEnum.FrontAndBack, GLEnum.Line);
+        Builder.GenerateFloor(ref CubePositions);
+        Builder.GenerateWalls(ref CubePositions);
     }
 
     private static unsafe void OnUpdate(double deltaTime)
     {
-
+        ///Builder.GenerateRandomSlop();
         if (input.Keyboards[0].IsKeyPressed(Key.W))
             camera.MoveForward();
 
@@ -216,14 +223,14 @@ public class Program
         {
             Matrix4X4<float> trans = Matrix4X4<float>.Identity;
             //trans = Matrix4X4.CreateRotationZ((float)timeValue) * trans;
-            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, (float)Math.Sin(timeValue * 100) )) * trans;
+            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, (float)Math.Sin(timeValue) )) * trans;
 
-            shader.SetMat4("transform", trans);
+            cubeShader.SetMat4("transform", trans);
         }
         else
         {
             Matrix4X4<float> trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0f, 0f, 0f));
-            shader.SetMat4("transform", trans);
+            cubeShader.SetMat4("transform", trans);
         }
     }
 
@@ -242,23 +249,23 @@ public class Program
         gl.ActiveTexture(GLEnum.Texture1);
         gl.BindTexture(GLEnum.Texture2D, texture2);
 
-        shader.Use();
+        cubeShader.Use();
 
         gl.BindVertexArray(VAO);
         //gl.DrawArrays(GLEnum.Triangles, 0, 3);
 
-        shader.SetMat4("view", camera.GetView());
+        cubeShader.SetMat4("view", camera.GetView());
 
         Matrix4X4<float> projection = Matrix4X4<float>.Identity;
         projection = Matrix4X4.CreatePerspectiveFieldOfView(fov, _aspectRatio, 0.1f, 100.0f) * projection;
-        shader.SetMat4("projection", projection);
+        cubeShader.SetMat4("projection", projection);
 
-        for (uint i = 0; i < 10; i++)
+        for (uint i = 0; i < CubePositions.Length; i++)
         {
             Matrix4X4<float> model = Matrix4X4<float>.Identity;
-            model = Matrix4X4.CreateTranslation(CubePositions[i]) * model;
+            model = Matrix4X4.CreateTranslation(CubePositions[ (int) i ]) * model;
 
-            float angle = timeValue * i; // в градусах
+            float angle = 0 * i; // в градусах
             float angleRad = angle * MathF.PI / 180f;
             Vector3D<float> axis = new Vector3D<float>(1.0f, 0.3f, 0.5f);
             axis = Vector3D.Normalize(axis);
@@ -267,7 +274,7 @@ public class Program
             Matrix4X4<float> rotationMatrix = Matrix4X4.CreateFromQuaternion(rotation);
             model = rotationMatrix * model;
 
-            shader.SetMat4("model", model);
+            cubeShader.SetMat4("model", model);
 
             // Рисуем куб
             gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
@@ -312,26 +319,26 @@ public class Program
 
         if (key == Key.Up)
         {
-            shader.Use();
-            shader.SetFloat("tex2Scale", shader.GetUniformFloatValue("tex2Scale") + 0.5f);
+            cubeShader.Use();
+            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") + 0.5f);
         }
 
         if (key == Key.Down)
         {
-            shader.Use();
-            shader.SetFloat("tex2Scale", shader.GetUniformFloatValue("tex2Scale") - 0.5f);
+            cubeShader.Use();
+            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") - 0.5f);
         }
 
         if (key == Key.Left)
         {
-            shader.Use();
-            shader.SetFloat("mixFactor", shader.GetUniformFloatValue("mixFactor") - 0.1f);
+            cubeShader.Use();
+            cubeShader.SetFloat("mixFactor", cubeShader.GetUniformFloatValue("mixFactor") - 0.1f);
         }
 
         if (key == Key.Right)
         {
-            shader.Use();
-            shader.SetFloat("mixFactor", shader.GetUniformFloatValue("mixFactor") + 0.1f);
+            cubeShader.Use();
+            cubeShader.SetFloat("mixFactor", cubeShader.GetUniformFloatValue("mixFactor") + 0.1f);
         }
 
         if (key == Key.A)
@@ -359,16 +366,21 @@ public class Program
             isOnUpdateTransform = !isOnUpdateTransform;
         }
 
+        if (key == Key.Z)
+        {
+            Builder.GenerateRandomSlop(ref CubePositions);
+        }
+
     }
 
     private static void OnMouseMove(IMouse mouse, Vector2 position)
     {
-        Console.WriteLine($"Mouse moved: {position.X}, {position.Y}");
         camera.ProcessMouseMovement(position.X, position.Y);
     }
     private static void OnMouseWheelScrole(IMouse mouse, ScrollWheel scrollWheel)
     {
         camera.ProcessMouseScroll(scrollWheel.Y, ref fov);
+        Console.WriteLine($"Wheel scrole, fov: {fov}");
     }
     private static unsafe uint LoadTexture(
         string path, 

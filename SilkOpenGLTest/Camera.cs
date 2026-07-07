@@ -15,15 +15,16 @@ namespace SilkOpenGLTest
         private bool firstMouse = true;
         private float lastX, lastY;
 
-        public Vector3D<float> cameraPos = new(0.0f, 0.0f, 3.0f);
+        public Vector3D<float> cameraPos = new(0.0f, 1.0f, 3.0f);
         public Vector3D<float> cameraFront = new(0.0f, 0.0f, -1.0f);
         public Vector3D<float> cameraUp = new(0.0f, 1.0f, 0.0f);
         private Matrix4X4<float> view;
 
         public float cameraSpeed = 2.5f;
 
+
         public Camera() 
-        { 
+        {
         }
 
         public void ProcessMouseScroll(float yoffset, ref float fov)
@@ -81,6 +82,30 @@ namespace SilkOpenGLTest
             view = Matrix4X4.CreateLookAt(cameraPos, cameraPos + cameraFront, cameraUp);
         }
 
+        private bool IsInsideCube(Vector3D<float> cameraPos)
+        {
+            foreach (var pos in Program.CubePositions)
+            {
+                if ((pos[0] - 0.55 <= cameraPos.X && cameraPos.X <= (pos[0] + 0.55)) &&
+                    (pos[1] - 0.55 <= cameraPos.Y && cameraPos.Y <= (pos[1] + 0.55)) &&
+                    (pos[2] - 0.55 <= cameraPos.Z && cameraPos.Z <= (pos[2] + 0.55)))
+                {
+                    return true;
+                }
+            }
+            return false;
+            //if ((Program.CubePositions[0][0] - 0.5 <= cameraPos.X && cameraPos.X <= (Program.CubePositions[0][0] + 0.5)) &&
+            //   (Program.CubePositions[0][1] - 0.5 <= cameraPos.Y && cameraPos.Y <= (Program.CubePositions[0][1] + 0.5)) &&
+            //   (Program.CubePositions[0][2] - 0.5 <= cameraPos.Z && cameraPos.Z <= (Program.CubePositions[0][2] + 0.5)))
+            //{
+            //    return true;
+            //}
+            //else
+            //{
+            //    return false;
+            //}
+        }
+
         public Matrix4X4<float> GetView()
         {
             return view;
@@ -88,29 +113,51 @@ namespace SilkOpenGLTest
 
         public void MoveLeft()
         {
-            cameraPos -= Vector3D.Normalize(Vector3D.Cross(cameraFront, cameraUp)) * cameraSpeed;
-            UpdateView();
-            Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            Vector3D<float> newPos = cameraPos - Vector3D.Normalize(Vector3D.Cross(cameraFront, cameraUp)) * cameraSpeed;
+            
+            if (!IsInsideCube(newPos))
+            {
+                cameraPos = newPos;
+                UpdateView();
+                Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            }
         }
         public void MoveRight()
         {
-            cameraPos += Vector3D.Normalize(Vector3D.Cross(cameraFront, cameraUp)) * cameraSpeed;
-            UpdateView();
-            Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            Vector3D<float> newPos = cameraPos + Vector3D.Normalize(Vector3D.Cross(cameraFront, cameraUp)) * cameraSpeed;
+
+            if (!IsInsideCube(newPos))
+            {
+                cameraPos = newPos;
+                UpdateView();
+                Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            }
         }
 
         public void MoveForward()
         {
-            cameraPos += cameraSpeed * cameraFront;
-            UpdateView();
-            Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            Vector3D<float> newPos = cameraPos + cameraSpeed * cameraFront;
+
+            if (!IsInsideCube(newPos))
+            {
+                cameraPos = newPos;
+                UpdateView();
+                Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            }
+            else { Console.WriteLine("Collision detected! Cannot move forward.");
+            }
         }
 
         public void MoveBackwards()
         {
-            cameraPos -= cameraSpeed * cameraFront;
-            UpdateView();
-            Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            Vector3D<float> newPos = cameraPos - cameraSpeed * cameraFront;
+
+            if (!IsInsideCube(newPos))
+            {
+                cameraPos = newPos;
+                UpdateView();
+                Console.WriteLine("cameraPos: " + cameraPos.ToString());
+            }
         }
     }
 }
