@@ -1,18 +1,12 @@
 ﻿using Silk.NET.Input;
 using Silk.NET.Maths;
-using Silk.NET.Windowing;
 using Silk.NET.OpenGL;
-using System.Drawing.Imaging;
-using System.IO;
-using System.Runtime.CompilerServices;
-using SixLabors.ImageSharp;
-using SixLabors.ImageSharp.PixelFormats;
-using SixLabors.ImageSharp.Processing;
+using Silk.NET.Windowing;
+using SilkOpenGLTest.Core;
 using System.Numerics;
-using System.Collections.Generic;
+using System.Runtime.InteropServices;
 
 namespace SilkOpenGLTest;
-
 public class Program
 {
     private static IWindow _window;
@@ -23,83 +17,67 @@ public class Program
     static float fov = MathF.PI / 180f * 45.0f;
 
     private static GL gl;
-    private static uint VBO;
-    private static uint VAO;
-    private static uint lightVAO;
-    private static uint EBO;
-    private static Shader cubeShader;
-    private static Shader lightsourceShader;
+    private static Core.Shader cubeShader;
     private static bool isLine = false;
-    private static uint texture1;
-    private static uint texture2;
+    private static Core.Texture _texture1;
+    private static Core.Texture _texture2;
     private static bool isOnUpdateTransform = false;
-    private static readonly float[] Vertices =
+
+    private static Mesh _cubeMesh;
+
+    private static Vertex V(float x, float y, float z, float u, float v)
+        => new(new Vector3D<float>(x, y, z), new Vector2D<float>(u, v));
+
+    private static Vertex[] GetCubeVertices()
+    {
+        return new Vertex[]
         {
-            //X    Y      Z   colors      texture coords
-            //0.5f, 0.5f, 0.0f, 1.0f, 0.0f, 0.0f, 1.0f, 1.0f,
-            //0.5f, -0.5f, 0.0f, 0.0f, 1.0f, 0.0f, 1.0f, 0.0f,
-            //-0.5f, -0.5f, 0.0f, 0.0f, 0.0f, 1.0f, 0.0f, 0.0f,
-            //-0.5f, 0.5f, 0.0f, 1.0f, 1.0f, 1.0f, 0.0f, 1.0f
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
-             0.5f, -0.5f, -0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 0.0f,
+            V(-0.5f, -0.5f, -0.5f, 0.0f, 0.0f),
+            V( 0.5f, -0.5f, -0.5f, 1.0f, 0.0f),
+            V( 0.5f,  0.5f, -0.5f, 1.0f, 1.0f),
+            V( 0.5f,  0.5f, -0.5f, 1.0f, 1.0f),
+            V(-0.5f,  0.5f, -0.5f, 0.0f, 1.0f),
+            V(-0.5f, -0.5f, -0.5f, 0.0f, 0.0f),
 
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 1.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
+            V(-0.5f, -0.5f,  0.5f, 0.0f, 0.0f),
+            V( 0.5f, -0.5f,  0.5f, 1.0f, 0.0f),
+            V( 0.5f,  0.5f,  0.5f, 1.0f, 1.0f),
+            V( 0.5f,  0.5f,  0.5f, 1.0f, 1.0f),
+            V(-0.5f,  0.5f,  0.5f, 0.0f, 1.0f),
+            V(-0.5f, -0.5f,  0.5f, 0.0f, 0.0f),
 
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            V(-0.5f,  0.5f,  0.5f,  1.0f, 0.0f),
+            V(-0.5f,  0.5f, -0.5f,  1.0f, 1.0f),
+            V(-0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
+            V(-0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
+            V(-0.5f, -0.5f,  0.5f,  0.0f, 0.0f),
+            V(-0.5f,  0.5f,  0.5f,  1.0f, 0.0f),
 
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
+            V(0.5f,  0.5f,  0.5f,  1.0f, 0.0f),
+            V(0.5f,  0.5f, -0.5f,  1.0f, 1.0f),
+            V(0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
+            V(0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
+            V(0.5f, -0.5f,  0.5f,  0.0f, 0.0f),
+            V(0.5f,  0.5f,  0.5f,  1.0f, 0.0f), 
 
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f, -0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f, -0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f, -0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f, -0.5f, -0.5f,  0.0f, 1.0f,
+            V(-0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
+            V( 0.5f, -0.5f, -0.5f,  1.0f, 1.0f),
+            V( 0.5f, -0.5f,  0.5f,  1.0f, 0.0f),
+            V( 0.5f, -0.5f,  0.5f,  1.0f, 0.0f),
+            V(-0.5f, -0.5f,  0.5f,  0.0f, 0.0f),
+            V(-0.5f, -0.5f, -0.5f,  0.0f, 1.0f),
 
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f,
-             0.5f,  0.5f, -0.5f,  1.0f, 1.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-             0.5f,  0.5f,  0.5f,  1.0f, 0.0f,
-            -0.5f,  0.5f,  0.5f,  0.0f, 0.0f,
-            -0.5f,  0.5f, -0.5f,  0.0f, 1.0f
+            V(-0.5f,  0.5f, -0.5f,  0.0f, 1.0f),
+            V( 0.5f,  0.5f, -0.5f,  1.0f, 1.0f),
+            V( 0.5f,  0.5f,  0.5f,  1.0f, 0.0f),
+            V( 0.5f,  0.5f,  0.5f,  1.0f, 0.0f),
+            V(-0.5f,  0.5f,  0.5f,  0.0f, 0.0f),
+            V(-0.5f,  0.5f, -0.5f,  0.0f, 1.0f)
         };
+    }
 
     public static Vector3D<float>[] CubePositions =
     {
-        new Vector3D<float>( 0.0f,  0.0f,  0.0f),
-        new Vector3D<float>( 2.0f,  5.0f, -15.0f),
-        new Vector3D<float>(-1.5f, -2.2f, -2.5f),
-        new Vector3D<float>(-3.8f, -2.0f, -12.3f),
-        new Vector3D<float>( 2.4f, -0.4f, -3.5f),
-        new Vector3D<float>(-1.7f,  3.0f, -7.5f),
-        new Vector3D<float>( 1.3f, -2.0f, -2.5f),
-        new Vector3D<float>( 1.5f,  2.0f, -2.5f),
-        new Vector3D<float>( 1.5f,  0.2f, -1.5f),
-        new Vector3D<float>(-1.3f,  1.0f, -1.5f),
-        new Vector3D<float>(-5.0f,  5.0f, -5.0f),
-        new Vector3D<float>(-6.0f,  5.0f, -5.0f),
-        new Vector3D<float>(-7.0f,  5.0f, -5.0f),
-        new Vector3D<float>(-8.0f,  5.0f, -5.0f)
-
     };
 
     private static Camera camera = new Camera();
@@ -140,7 +118,7 @@ public class Program
     private static unsafe void OnLoad()
     {
         input = _window.CreateInput();
-
+        Console.WriteLine($"Vertex size: {Marshal.SizeOf<Vertex>()}");
         // Subscribing each connected keyboard to KeyDown event
         for (int i = 0; i < input.Keyboards.Count; i++)
         {
@@ -157,41 +135,13 @@ public class Program
         }
 
         gl = GL.GetApi(_window);
-        lightsourceShader = new Shader(gl, "shaders/lightsource/vertex.glsl", "shaders/lightsource/fragment.glsl");
-        cubeShader = new Shader(gl, "shaders/cube/vertex.glsl", "shaders/cube/fragment.glsl");
+        cubeShader = new Core.Shader(gl, "shaders/cube/vertex.glsl", "shaders/cube/fragment.glsl");
         gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-        VAO = gl.GenVertexArray();
-        VBO = gl.GenBuffer();
-        EBO = gl.GenBuffer();
+        _cubeMesh = new Mesh(gl, GetCubeVertices());
 
-        gl.BindVertexArray(VAO);
-
-        gl.BindBuffer(BufferTargetARB.ArrayBuffer, VBO);
-
-        fixed (void* v = &Vertices[0])
-        {
-            gl.BufferData(BufferTargetARB.ArrayBuffer, (nuint)(Vertices.Length * sizeof(float)), v, BufferUsageARB.StaticDraw); //Setting buffer data.
-        }
-
-        gl.BindBuffer(BufferTargetARB.ElementArrayBuffer, EBO);
-
-        fixed (void* i = &Indices[0])
-        {
-            gl.BufferData(BufferTargetARB.ElementArrayBuffer, (nuint)(Indices.Length * sizeof(uint)), i, BufferUsageARB.StaticDraw);
-        }
-
-        gl.VertexAttribPointer(0, 3, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)0);
-        gl.EnableVertexAttribArray(0);
-
-        gl.VertexAttribPointer(1, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(3 * sizeof(float)));
-        gl.EnableVertexAttribArray(1);
-
-        //gl.VertexAttribPointer(2, 2, VertexAttribPointerType.Float, false, (uint)VertexSize * sizeof(float), (void*)(6 * sizeof(float)));
-        //gl.EnableVertexAttribArray(2);
-
-        texture1 = LoadTexture("img/igor2.png", texture1);
-        texture2 = LoadTexture("img/thing.jpg", texture2, GLEnum.MirroredRepeat, GLEnum.MirroredRepeat);
+        _texture1 = new Core.Texture(gl, "img/test.jpg");
+        _texture2 = new Core.Texture(gl, "img/osu.png", wrapS: TextureWrapMode.MirroredRepeat, wrapT: TextureWrapMode.MirroredRepeat);
 
         cubeShader.Use();
         cubeShader.SetInt("texture2", 1);
@@ -218,12 +168,24 @@ public class Program
         if (input.Keyboards[0].IsKeyPressed(Key.D))
             camera.MoveRight();
 
+        if (input.Keyboards[0].IsKeyPressed(Key.Up))
+        {
+            cubeShader.Use();
+            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") + 500.5f);
+        }
+
+        if (input.Keyboards[0].IsKeyPressed(Key.Down))
+        {
+            cubeShader.Use();
+            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") - 5.5f);
+        }
+
         float timeValue = (float)_window.Time;
         if (isOnUpdateTransform)
         {
             Matrix4X4<float> trans = Matrix4X4<float>.Identity;
-            //trans = Matrix4X4.CreateRotationZ((float)timeValue) * trans;
-            trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, (float)Math.Sin(timeValue) )) * trans;
+            trans = Matrix4X4.CreateRotationY((float)timeValue) * trans;
+            //trans = Matrix4X4.CreateTranslation(new Vector3D<float>(0.0f, 0.0f, (float)Math.Sin(timeValue) )) * trans;
 
             cubeShader.SetMat4("transform", trans);
         }
@@ -243,15 +205,11 @@ public class Program
         gl.Clear(ClearBufferMask.ColorBufferBit);
         gl.Clear(ClearBufferMask.DepthBufferBit);
 
-        gl.ActiveTexture(GLEnum.Texture0);
-        gl.BindTexture(GLEnum.Texture2D, texture1);
-
-        gl.ActiveTexture(GLEnum.Texture1);
-        gl.BindTexture(GLEnum.Texture2D, texture2);
+        _texture1.Bind(TextureUnit.Texture0);
+        _texture2.Bind(TextureUnit.Texture1);
 
         cubeShader.Use();
 
-        gl.BindVertexArray(VAO);
         //gl.DrawArrays(GLEnum.Triangles, 0, 3);
 
         cubeShader.SetMat4("view", camera.GetView());
@@ -272,12 +230,14 @@ public class Program
 
             Quaternion<float> rotation = Quaternion<float>.CreateFromAxisAngle(axis, angleRad);
             Matrix4X4<float> rotationMatrix = Matrix4X4.CreateFromQuaternion(rotation);
+            //rotationMatrix = Matrix4X4.CreateRotationX((float)timeValue) * rotationMatrix;
+            //rotationMatrix = Matrix4X4.CreateRotationY((float)timeValue) * rotationMatrix;
+            //rotationMatrix = Matrix4X4.CreateRotationZ((float)timeValue) * rotationMatrix;
             model = rotationMatrix * model;
-
             cubeShader.SetMat4("model", model);
 
             // Рисуем куб
-            gl.DrawArrays(PrimitiveType.Triangles, 0, 36);
+            _cubeMesh.Draw();
         }
         //gl.DeleteVertexArray(VAO);
         //gl.DeleteBuffer(VBO);
@@ -291,8 +251,9 @@ public class Program
 
     private static void OnClose()
     {
-        //Remember to delete the buffers.
-        gl.DeleteBuffer(VBO);
+        _cubeMesh.Dispose();
+        _texture1?.Dispose();
+        _texture2?.Dispose();
     }
 
     private static void ChangePolygonMode()
@@ -381,43 +342,5 @@ public class Program
     {
         camera.ProcessMouseScroll(scrollWheel.Y, ref fov);
         Console.WriteLine($"Wheel scrole, fov: {fov}");
-    }
-    private static unsafe uint LoadTexture(
-        string path, 
-        uint texture,
-        GLEnum paramWrapS = GLEnum.Repeat,
-        GLEnum paramWrapT = GLEnum.Repeat,
-        GLEnum paramMinFilter = GLEnum.Linear,
-        GLEnum paramMaxFilter = GLEnum.Linear)
-    {
-        texture = gl.GenTexture();
-        gl.BindTexture(GLEnum.Texture2D, texture);
-
-        using (var img = Image.Load<Rgba32>(path))
-        {
-            if (img == null) throw new Exception("Failed to load image");
-
-            // Переворачиваем по Y, если нужно (OpenGL ожидает первый пиксель снизу слева)
-            img.Mutate(x => x.Flip(FlipMode.Vertical));
-
-            // Подготавливаем массив байт для пикселей
-            byte[] pixels = new byte[img.Width * img.Height * 4];
-
-            // Копируем пиксели из ImageSharp в массив
-            img.CopyPixelDataTo(pixels);
-
-            fixed (byte* ptr = pixels)
-            {
-                gl.TexImage2D(GLEnum.Texture2D, 0, (int)GLEnum.Rgba, (uint)img.Width, (uint)img.Height, 0, GLEnum.Rgba, GLEnum.UnsignedByte, ptr);
-            }
-        }
-
-        // Настройки текстуры
-        gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapS, (int)paramWrapS);
-        gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureWrapT, (int)paramWrapT);
-        gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMinFilter, (int)paramMinFilter);
-        gl.TexParameter(GLEnum.Texture2D, TextureParameterName.TextureMagFilter, (int)paramMaxFilter);
-
-        return texture;
     }
 }

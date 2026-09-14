@@ -15,6 +15,12 @@
   </ItemGroup>
 
   <ItemGroup>
+    <None Update="img\bruh.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="img\dog.jpg">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
     <None Update="img\govno.png">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
@@ -22,6 +28,9 @@
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
     </None>
     <None Update="img\igor2.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
+    </None>
+    <None Update="img\lexa.jpg">
       <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="img\mark.png">
@@ -38,6 +47,9 @@
     </None>
     <None Update="img\thing.jpg">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
+    </None>
+    <None Update="img\vlad.png">
+      <CopyToOutputDirectory>Always</CopyToOutputDirectory>
     </None>
     <None Update="shaders\cube\fragment.glsl">
       <CopyToOutputDirectory>PreserveNewest</CopyToOutputDirectory>
