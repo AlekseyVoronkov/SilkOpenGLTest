@@ -17,14 +17,19 @@ public class Program
     static float fov = MathF.PI / 180f * 45.0f;
 
     private static GL gl;
-    private static Core.Shader cubeShader;
     private static bool isLine = false;
+    private static Scene _scene;
     private static Core.Texture _texture1;
     private static Core.Texture _texture2;
+    private static Core.Shader cubeShader;
+    private static Mesh _cubeMesh;
+    private static Material _cubeMaterial;
+
     private static bool isOnUpdateTransform = false;
 
-    private static Mesh _cubeMesh;
 
+    private static float _tex2Scale = 1.0f;
+    private static float _mixFactor = 0f;
     private static Vertex V(float x, float y, float z, float u, float v)
         => new(new Vector3D<float>(x, y, z), new Vector2D<float>(u, v));
 
@@ -138,19 +143,32 @@ public class Program
         cubeShader = new Core.Shader(gl, "shaders/cube/vertex.glsl", "shaders/cube/fragment.glsl");
         gl.ClearColor(0.2f, 0.3f, 0.3f, 1.0f);
 
-        _cubeMesh = new Mesh(gl, GetCubeVertices());
 
         _texture1 = new Core.Texture(gl, "img/test.jpg");
         _texture2 = new Core.Texture(gl, "img/osu.png", wrapS: TextureWrapMode.MirroredRepeat, wrapT: TextureWrapMode.MirroredRepeat);
 
-        cubeShader.Use();
-        cubeShader.SetInt("texture2", 1);
-        cubeShader.SetFloat("tex2Scale", 1.0f);
-        cubeShader.SetFloat("mixFactor", 0f);
+        _cubeMaterial = new Material(cubeShader)
+            .SetTexture("texture1", _texture1, TextureUnit.Texture0)
+            .SetTexture("texture2", _texture2, TextureUnit.Texture1)
+            .SetFloat("tex2Scale", 1.0f)
+            .SetFloat("mixFactor", 0f);
 
-        gl.Enable(GLEnum.DepthTest);
+        _cubeMesh = new Mesh(gl, GetCubeVertices());
+
+        _scene = new Scene(camera);
+
         Builder.GenerateFloor(ref CubePositions);
         Builder.GenerateWalls(ref CubePositions);
+
+        foreach (var pos in CubePositions)
+        {
+            _scene.AddGameObject(new GameObject(_cubeMesh, _cubeMaterial)
+            {
+                Position = pos
+            });
+        }
+
+        gl.Enable(GLEnum.DepthTest);
     }
 
     private static unsafe void OnUpdate(double deltaTime)
@@ -170,14 +188,12 @@ public class Program
 
         if (input.Keyboards[0].IsKeyPressed(Key.Up))
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") + 500.5f);
+            _tex2Scale += 0.5f;
         }
 
         if (input.Keyboards[0].IsKeyPressed(Key.Down))
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") - 5.5f);
+            _tex2Scale -= 0.5f;
         }
 
         float timeValue = (float)_window.Time;
@@ -208,40 +224,22 @@ public class Program
         _texture1.Bind(TextureUnit.Texture0);
         _texture2.Bind(TextureUnit.Texture1);
 
-        cubeShader.Use();
+        _cubeMaterial
+            .SetFloat("tex2Scale", _tex2Scale)
+            .SetFloat("mixFactor", _mixFactor)
+            .Bind();
 
-        //gl.DrawArrays(GLEnum.Triangles, 0, 3);
-
-        cubeShader.SetMat4("view", camera.GetView());
-
-        Matrix4X4<float> projection = Matrix4X4<float>.Identity;
-        projection = Matrix4X4.CreatePerspectiveFieldOfView(fov, _aspectRatio, 0.1f, 100.0f) * projection;
-        cubeShader.SetMat4("projection", projection);
-
-        for (uint i = 0; i < CubePositions.Length; i++)
+        if (isOnUpdateTransform)
         {
-            Matrix4X4<float> model = Matrix4X4<float>.Identity;
-            model = Matrix4X4.CreateTranslation(CubePositions[ (int) i ]) * model;
-
-            float angle = 0 * i; // в градусах
-            float angleRad = angle * MathF.PI / 180f;
-            Vector3D<float> axis = new Vector3D<float>(1.0f, 0.3f, 0.5f);
-            axis = Vector3D.Normalize(axis);
-
-            Quaternion<float> rotation = Quaternion<float>.CreateFromAxisAngle(axis, angleRad);
-            Matrix4X4<float> rotationMatrix = Matrix4X4.CreateFromQuaternion(rotation);
-            //rotationMatrix = Matrix4X4.CreateRotationX((float)timeValue) * rotationMatrix;
-            //rotationMatrix = Matrix4X4.CreateRotationY((float)timeValue) * rotationMatrix;
-            //rotationMatrix = Matrix4X4.CreateRotationZ((float)timeValue) * rotationMatrix;
-            model = rotationMatrix * model;
-            cubeShader.SetMat4("model", model);
-
-            // Рисуем куб
-            _cubeMesh.Draw();
+            foreach (var obj in _scene.GameObjects)
+            {
+                obj.Rotation = new Vector3D<float>(0, timeValue * 50f, 0);
+            }
         }
-        //gl.DeleteVertexArray(VAO);
-        //gl.DeleteBuffer(VBO);
-        //gl.DeleteProgram(ShaderProgram);
+
+        gl.Clear(ClearBufferMask.ColorBufferBit | ClearBufferMask.DepthBufferBit);
+
+        _scene.Draw(_aspectRatio, fov);
     }
 
     private static void OnFramebufferResize(Vector2D<int> newSize)
@@ -280,26 +278,22 @@ public class Program
 
         if (key == Key.Up)
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") + 0.5f);
+            _tex2Scale += 0.5f;
         }
 
         if (key == Key.Down)
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("tex2Scale", cubeShader.GetUniformFloatValue("tex2Scale") - 0.5f);
+            _tex2Scale -= 0.5f;
         }
 
         if (key == Key.Left)
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("mixFactor", cubeShader.GetUniformFloatValue("mixFactor") - 0.1f);
+            _mixFactor -= 0.1f;
         }
 
         if (key == Key.Right)
         {
-            cubeShader.Use();
-            cubeShader.SetFloat("mixFactor", cubeShader.GetUniformFloatValue("mixFactor") + 0.1f);
+            _mixFactor += 0.1f;
         }
 
         if (key == Key.A)
@@ -329,7 +323,14 @@ public class Program
 
         if (key == Key.Z)
         {
-            Builder.GenerateRandomSlop(ref CubePositions);
+            var thing = Random.Shared.Next(20);
+
+            _scene.AddGameObject(new GameObject(_cubeMesh, _cubeMaterial)
+            {
+                Position = new (Random.Shared.Next(-thing, thing),
+                Random.Shared.Next(-thing, thing),
+                Random.Shared.Next(-thing, thing))
+            });
         }
 
     }

@@ -25,6 +25,7 @@ namespace SilkOpenGLTest
 
         public Camera() 
         {
+            UpdateView();
         }
 
         public void ProcessMouseScroll(float yoffset, ref float fov)

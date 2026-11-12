@@ -1,4 +1,5 @@
 ﻿using Silk.NET.Maths;
+using SilkOpenGLTest.Core;
 using System;
 using System.Collections.Generic;
 using System.Linq;
@@ -31,16 +32,12 @@ namespace SilkOpenGLTest
             }
         }
 
-        public static void GenerateRandomSlop(ref Vector3D<float>[] CubePositions)
+        public static void GenerateRandomSlop(Scene scene)
         {
             for (int i = 0; i <=10; i++)
             {
                 var thing = Random.Shared.Next(20);
 
-                CubePositions = CubePositions.Append(new Vector3D<float>(
-                    Random.Shared.Next(-thing, thing), 
-                    Random.Shared.Next(-thing, thing), 
-                    Random.Shared.Next(-thing, thing))).ToArray();
             }
         }
     }

@@ -22,7 +22,6 @@ public class Mesh : IDisposable
         _vao = _gl.GenVertexArray();
         _gl.BindVertexArray(_vao);
 
-        // VBO
         _vbo = _gl.GenBuffer();
         _gl.BindBuffer(BufferTargetARB.ArrayBuffer, _vbo);
 
